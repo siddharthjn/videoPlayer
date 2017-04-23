@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <title>Realtime communication with WebRTC</title>
+
+  <link rel="stylesheet" href="css/main.css" />
+
+</head>
+
+<body>
+
+  <button id="record">Record</button>
+  <button id="stop">Stop</button>
+  <button id="pause">Pause</button>
+  <input type="file" accept="video/*"/>
+  <div id="errorMsg"></div>
+  <video id="live" autoplay></video>
+  <video id="recordingSec" controls width="320" autoplay></video>
+
+
+<div id="message"></div>
+
+<video id ="uploadedVid" controls autoplay></video>
+
+
+   <script src="https://cdn.temasys.com.sg/adapterjs/0.14.x/adapter.debug.js"></script>
+  <script src="js/recorder.js"></script>
+
+</body>
+
+</html>
