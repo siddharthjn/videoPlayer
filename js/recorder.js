@@ -5,11 +5,17 @@
 // MediaRecorder.stop -> stop recording (this will generate a blob of data)
 // URL.createObjectURL -> to create a URL from a blob, which we use as video src
 
+var constraints = window.constraints = {
+  audio: true,
+  video: true
+};
+
 class videoRecorder{
+
   startRecording() {
     pauseButton.disabled = false;
     if(streamingOn == 0){
-      videoRecorder.recordAgain();
+      videoRecorder.continueRecording();
       document.getElementById('recordingSec').style.display ="none";
     }
     recorder = new MediaRecorder(stream);
@@ -33,13 +39,13 @@ class videoRecorder{
 
   }
 
-  static recordAgain(){
+  static continueRecording(){
     AdapterJS.webRTCReady(function(isUsingPlugin) {
       if (typeof Promise === 'undefined') {
-        navigator.getUserMedia(constraints, onSuccess, onFailure);
+        navigator.getUserMedia(constraints, videoRecorder.onSuccess, videoRecorder.onFailure);
       } else {
         navigator.mediaDevices.getUserMedia(constraints)
-          .then(onSuccess).catch(onFailure);
+          .then(videoRecorder.onSuccess).catch(videoRecorder.onFailure);
       }
     });
 
@@ -105,17 +111,61 @@ class videoRecorder{
     var inputNode = document.querySelector('input')
     inputNode.addEventListener('change', playSelectedFile, false)
   }
+
+  static onSuccess(stream) {
+    var videoTracks = stream.getVideoTracks();
+    console.log('Got stream with constraints:', constraints);
+    console.log('Using video device: ' + videoTracks[0].label);
+    stream.onended = function() {
+      console.log('Stream ended');
+    };
+    window.stream = stream; // make variable available to browser console
+    var video = attachMediaStream(liveVideo, stream);
+    streamingOn =1;
+  }
+
+  onFailure(error) {
+    if (error.name === 'ConstraintNotSatisfiedError') {
+      errorMsg('The resolution ' + constraints.video.width.exact + 'x' +
+          constraints.video.width.exact + ' px is not supported by your device.');
+    } else if (error.name === 'PermissionDeniedError') {
+      errorMsg('Permissions have not been granted to use your camera and ' +
+        'microphone, you need to allow the page access to your devices in ' +
+        'order for the demo to work.');
+    }
+    errorMsg('getUserMedia error: ' + error.name, error);
+  };
+
+  errorMsg(msg, error) {
+    errorElement.innerHTML += '<p>' + msg + '</p>';
+    if (typeof error !== 'undefined') {
+      console.error(error);
+    }
+  }
+
+  readyToStream(){
+  AdapterJS.webRTCReady(function(isUsingPlugin) {
+    if (typeof Promise === 'undefined') {
+      navigator.getUserMedia(constraints, videoRecorder.onSuccess, videoRecorder.onFailure);
+    } else {
+      navigator.mediaDevices.getUserMedia(constraints)
+        .then(videoRecorder.onSuccess).catch(videoRecorder.onFailure);
+
+    }
+  });
+}
 }
 
-
 var vr = new videoRecorder();
+vr.readyToStream();
 
 /**Buttons are only for testing purpose */
-var recordButton, stopButton, recorder, liveStream;
+var recorder, liveStream;
 var liveVideo = document.getElementById('live');
 var recordButton = document.getElementById('record');
 var stopButton = document.getElementById('stop');
-pauseButton = document.getElementById('pause');
+var pauseButton = document.getElementById('pause');
+var errorElement = document.getElementById('errorMsg');
 pauseButton.disabled = true;
 recordButton.disabled = false;
 stopButton.disabled = false;
@@ -128,50 +178,3 @@ var streamingOn = 0;
 recordButton.addEventListener('click', vr.startRecording);
 stopButton.addEventListener('click', vr.stopRecording);
 pauseButton.addEventListener('click', vr.pauseRecording);
-
-var constraints = window.constraints = {
-  audio: true,
-  video: true
-};
-var errorElement = document.querySelector('#errorMsg');
-
-var onSuccess = function(stream) {
-  var videoTracks = stream.getVideoTracks();
-  console.log('Got stream with constraints:', constraints);
-  console.log('Using video device: ' + videoTracks[0].label);
-  stream.onended = function() {
-    console.log('Stream ended');
-  };
-  window.stream = stream; // make variable available to browser console
-  video = attachMediaStream(liveVideo, stream);
-  streamingOn =1;
-};
-
-var onFailure = function(error) {
-  if (error.name === 'ConstraintNotSatisfiedError') {
-    errorMsg('The resolution ' + constraints.video.width.exact + 'x' +
-        constraints.video.width.exact + ' px is not supported by your device.');
-  } else if (error.name === 'PermissionDeniedError') {
-    errorMsg('Permissions have not been granted to use your camera and ' +
-      'microphone, you need to allow the page access to your devices in ' +
-      'order for the demo to work.');
-  }
-  errorMsg('getUserMedia error: ' + error.name, error);
-};
-
-function errorMsg(msg, error) {
-  errorElement.innerHTML += '<p>' + msg + '</p>';
-  if (typeof error !== 'undefined') {
-    console.error(error);
-  }
-}
-
-AdapterJS.webRTCReady(function(isUsingPlugin) {
-  if (typeof Promise === 'undefined') {
-    navigator.getUserMedia(constraints, onSuccess, onFailure);
-  } else {
-    navigator.mediaDevices.getUserMedia(constraints)
-      .then(onSuccess).catch(onFailure);
-
-  }
-});
